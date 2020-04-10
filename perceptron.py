@@ -4,24 +4,30 @@ from typing import List, Union
 np.random.seed(1)
 
 
-def sigmoid(x: Union[int, float, np.ndarray]):
+def sigmoid(x: Union[int, float, np.ndarray]) -> float:
     return 1 / (1 + np.exp(-x))
 
 
-def deriv_sigmoid(x: Union[int, float, np.ndarray]):
+def deriv_sigmoid(x: Union[int, float, np.ndarray]) -> float:
     fx = sigmoid(x)
     return fx * (1 - fx)
 
 
 class Perceptron:
-    def __init__(self, layer_1: int, layer_2: int, *other_layers: [int]):
+    def __init__(self, layer_1: int, layer_2: int, *other_layers: int):
         # список слоёв и их размеров
         layers = [layer_1, layer_2] + list(other_layers)
         # генерируются синапсы между уровнями нейронов, которые представляют из себя массив весов
         # Аij, где i и j - размеры соединяемых слоёв, каждый вес - вес между каждым из нейронов
-        self._synapses = [2 * np.random.random((layers[syn], layers[syn + 1])) - 1 for syn in range(len(layers) - 1)]
+        self._synapses = []
+        # self._biases = []
+        for syn in range(len(layers) - 1):
+            # каждый нейрон связываем с каждым нейроном предыдущего слоя
+            self._synapses.append(2 * np.random.random((layers[syn], layers[syn + 1])) - 1)
+            # todo для каждого нейрона всех слоёв кроме 1-го задаём сдвиги
+            # self._biases.append(2 * np.random.random(layers[syn + 1]) - 1)
 
-    def feedforward(self, inp: Union[List[float], np.ndarray]):
+    def feedforward(self, inp: Union[List[float], np.ndarray]) -> np.ndarray:
         """
         Функция прямого распространения.
         inp - список входных значений
@@ -38,7 +44,8 @@ class Perceptron:
               out: np.ndarray,
               epochs: int = 100000,
               learn_coef: Union[float, int] = 1,
-              err_print: bool = True
+              err_print: bool = True,
+              err_print_frequency: int = 10000,
               ):
         """
         Функция обучения.
@@ -59,31 +66,33 @@ class Perceptron:
 
             # обратный ход
             # для последнего слоя рассчитывается ошибка = разница между рассчётными и необходимыми выходными сигналами
-            # из ошибки рассчитывется дельта ошибки - величина на которую необходимо совершить сдвиг
-            d_li = [(out - li[-1]) * deriv_sigmoid(li[-1]) * learn_coef]  # необходимые сдвиги для каждого слоя
+            # из ошибки рассчитывется дельта ошибки - величина на которую необходимо совершить смещение
+            d_li = [(out - li[-1]) * deriv_sigmoid(li[-1])]  # необходимые смещения для каждого слоя
             for i in range(len(li) - 2, 0, -1):  # обратный проход не включая первый и последний слои
                 # используя рассчитанное значение сдвига следующего слоя, рассчитывается ошибка для предыдущего слоя
                 li_err = d_li[0].dot(self._synapses[i].T)
-                # аналогично из ошибки рассчитывется дельта ошибки - величина на которую необходимо совершить сдвиг
+                # аналогично из ошибки рассчитывется дельта ошибки - величина на которую необходимо совершить смещение
                 d_li.insert(0, li_err * deriv_sigmoid(li[i]))
 
-            # сдвиги применяются к синапсам
+            # смещения применяются к синапсам
             for i in range(len(self._synapses)):
-                self._synapses[i] += li[i].T.dot(d_li[i])
+                self._synapses[i] += li[i].T.dot(d_li[i]) * learn_coef
 
             # если есть необходимость, в консоль выводится ошибка
-            if err_print and (epoch % 10000) == 0: print("Error: ", str(np.mean(np.abs(out - self.feedforward(inp)))))
+            if err_print and (epoch % err_print_frequency) == 0:
+                print("Error: ", str(np.mean(np.abs(out - self.feedforward(inp)))))
 
 
 if __name__ == "__main__":
-    p3 = Perceptron(3, 5, 8, 1)
-    p3.learn(np.array([[0, 0, 1],
-                       [0, 1, 1],
-                       [1, 0, 1],
-                       [1, 1, 1]]),
-             np.array([[0, 0, 1, 1]]).T
-             )
-    print(p3.feedforward([0, 0, 1]))  # 0
+    p3 = Perceptron(3, 2, 1)
+    p3.learn(
+        np.array([[0, 0, 1],
+                  [0, 1, 1],
+                  [1, 0, 1],
+                  [1, 1, 1]]),
+        np.array([[0, 0, 1, 1]]).T
+    )
     print(p3.feedforward([0, 1, 1]))  # 0
-    print(p3.feedforward([1, 0, 1]))  # 1
+    print(p3.feedforward([0, 0, 1]))  # 0
     print(p3.feedforward([1, 1, 0]))  # 1
+    print(p3.feedforward([1, 0, 0]))  # 1
