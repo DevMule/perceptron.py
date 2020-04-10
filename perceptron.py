@@ -20,12 +20,12 @@ class Perceptron:
         # генерируются синапсы между уровнями нейронов, которые представляют из себя массив весов
         # Аij, где i и j - размеры соединяемых слоёв, каждый вес - вес между каждым из нейронов
         self._synapses = []
-        # self._biases = []
+        self._biases = []
         for syn in range(len(layers) - 1):
-            # каждый нейрон связываем с каждым нейроном предыдущего слоя
+            # каждый нейрон связываем с каждым нейроном предыдущего слоя случайным значением
             self._synapses.append(2 * np.random.random((layers[syn], layers[syn + 1])) - 1)
-            # todo для каждого нейрона всех слоёв кроме 1-го задаём сдвиги
-            # self._biases.append(2 * np.random.random(layers[syn + 1]) - 1)
+            # для каждого нейрона для всех слоёв кроме 1-го задаём случайные сдвиги
+            self._biases.append(2 * np.random.random(layers[syn + 1]) - 1)
 
     def feedforward(self, inp: Union[List[float], np.ndarray]) -> np.ndarray:
         """
@@ -36,12 +36,12 @@ class Perceptron:
         li = np.array(inp)  # входной слой
         for i in range(len(self._synapses)):  # для каждого последующего
             # с использованием предыдущего слоя рассчитываются значения следующего
-            li = sigmoid(np.dot(li, self._synapses[i]))
+            li = sigmoid(np.dot(li, self._synapses[i]) + self._biases[i])
         return li  # последний слой - выходной
 
     def learn(self,
-              inp: np.ndarray,
-              out: np.ndarray,
+              inp: Union[List[List[float]], np.ndarray],
+              out: Union[List[List[float]], np.ndarray],
               epochs: int = 100000,
               learn_coef: Union[float, int] = 1,
               err_print: bool = True,
@@ -59,24 +59,32 @@ class Perceptron:
         out = np.array(out)
         for epoch in range(epochs):
 
-            # прямой ход - запись значений слоёв
-            li = [inp]  # список рассчитанных значений слоёв начинается с входного
+            # прямой ход - рассчёт значений слоёв
+            li = [inp]  # список рассчитанных значений для каждого слоя для каждого входного значения начиная с входного
             for i in range(len(self._synapses)):
-                li.append(sigmoid(np.dot(li[i], self._synapses[i])))
+                # т.к. ВСЕ входные значения хранятся в матрице,
+                # для каждого слоя рассчитываются значения для каждого из входных значений
+                li.append(sigmoid(np.dot(li[i], self._synapses[i]) + self._biases[i]))
 
-            # обратный ход
+            # обратный ход - рассчёт необходимых смещений для синапсов
             # для последнего слоя рассчитывается ошибка = разница между рассчётными и необходимыми выходными сигналами
             # из ошибки рассчитывется дельта ошибки - величина на которую необходимо совершить смещение
+            #      [(   ошибка   ) * производная значения ] = смещение, необходимое для минимизации ошибки в будущем
             d_li = [(out - li[-1]) * deriv_sigmoid(li[-1])]  # необходимые смещения для каждого слоя
             for i in range(len(li) - 2, 0, -1):  # обратный проход не включая первый и последний слои
                 # используя рассчитанное значение сдвига следующего слоя, рассчитывается ошибка для предыдущего слоя
                 li_err = d_li[0].dot(self._synapses[i].T)
-                # аналогично из ошибки рассчитывется дельта ошибки - величина на которую необходимо совершить смещение
+                # аналогично из ошибки рассчитывется величина на которую необходимо совершить смещение
                 d_li.insert(0, li_err * deriv_sigmoid(li[i]))
 
-            # смещения применяются к синапсам
+            # применение смещений для синапсов и сдвигов
             for i in range(len(self._synapses)):
+                # смещения применяются к синапсам
                 self._synapses[i] += li[i].T.dot(d_li[i]) * learn_coef
+                # смещения рассчитываются и применяются к сдвигам
+                # т.к. d_li представляет из себя смещение для каждого нейрона для каждого из заданных пар значений
+                # то для каждого нейрона находится среднее значение смещения
+                self._biases[i] += np.mean(d_li[i], axis=0) * learn_coef
 
             # если есть необходимость, в консоль выводится ошибка
             if err_print and (epoch % err_print_frequency) == 0:
@@ -88,11 +96,16 @@ if __name__ == "__main__":
     p3.learn(
         np.array([[0, 0, 1],
                   [0, 1, 1],
-                  [1, 0, 1],
+                  [1, 0, 0],
+                  [1, 1, 0],
                   [1, 1, 1]]),
-        np.array([[0, 0, 1, 1]]).T
+        np.array([[0],
+                  [0],
+                  [1],
+                  [1],
+                  [1]])
     )
     print(p3.feedforward([0, 1, 1]))  # 0
     print(p3.feedforward([0, 0, 1]))  # 0
     print(p3.feedforward([1, 1, 0]))  # 1
-    print(p3.feedforward([1, 0, 0]))  # 1
+    print(p3.feedforward([1, 0, 1]))  # 1 ?
