@@ -18,10 +18,9 @@ Todo:
 
 Используемая литература:
     https://python-scripts.com/intro-to-neural-networks
-    https://radioprog.ru/post/786
-    https://radioprog.ru/post/780
     https://www.youtube.com/watch?v=6g4O5UOH304
     https://habr.com/ru/post/271563/
+    https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi
 
 Пример использования:
     p3 = Perceptron(3, 2, 1)  # инициализация сети со слоями размеров 3, 2 и 1 соответственно
@@ -54,19 +53,21 @@ class Perceptron:
         # список слоёв и их размеров
         layers = [layer_1, layer_2] + list(other_layers)
 
-        self._synapses = []
-        self._biases = []
-
+        synapses = []
+        biases = []
         for i in range(len(layers) - 1):
             # генерируются синапсы между уровнями нейронов, которые представляют из себя массив весов
             # матрица Аij, где i и j - размеры соединяемых слоёв, каждый вес - вес между каждым из нейронов
             # каждый нейрон связываем с каждым нейроном предыдущего слоя случайным значением
-            self._synapses.append(2 * np.random.random((layers[i], layers[i + 1])) - 1)
+            synapses.append((2 * np.random.random((layers[i], layers[i + 1])) - 1))
             # генерируются сдвиги для каждого нейрона всех слоёв кроме первого
             # вектор Bi, где i - размер слоя. для каждого нейрона для всех слоёв кроме 1-го задаются случайные сдвиги
-            self._biases.append(2 * np.random.random(layers[i + 1]) - 1)
+            biases.append((2 * np.random.random(layers[i + 1]) - 1))
 
-    def feedforward(self, inp: Union[List[float], np.ndarray]) -> np.ndarray:
+        self._synapses = np.array(synapses)
+        self._biases = np.array(biases)
+
+    def feedforward(self, inp: Union[List[float], np.ndarray]) -> List[float]:
         """
         Функция прямого распространения.
         inp - список входных значений
@@ -76,13 +77,13 @@ class Perceptron:
         for i in range(len(self._synapses)):  # для каждого последующего
             # с использованием предыдущего слоя рассчитываются значения следующего
             li = sigmoid(np.dot(li, self._synapses[i]) + self._biases[i])
-        return li  # последний слой - выходной
+        return li.tolist()  # последний слой - выходной
 
     def learn(self,
-              inp: Union[List[List[float]], np.ndarray],
-              out: Union[List[List[float]], np.ndarray],
+              inp: List[List[float]],
+              out: List[List[float]],
               epochs: int = 100000,
-              learn_coef: Union[float, int] = 1,
+              learn_rate: Union[float, int] = .1,
               err_print: bool = True,
               err_print_frequency: int = 10000,
               ):
@@ -97,8 +98,15 @@ class Perceptron:
         inp = np.array(inp)
         out = np.array(out)
         for epoch in range(epochs):
+            # обратный ход - рассчёт необходимых смещений для синапсов проходит по следующей формуле:
+            # d_Wij = learn_rate * Em * deriv_sigmoid(m) * L.T , где
+            # d_Wij = величина, на которую необходимо сместить вес между нейронами i слоя L и j слоя M
+            # learn_rate = коэффициент обучения
+            # Em = ошибка значений нейронов слоя M, deriv_sigmoid(m) = производная функция в рассчитанных координатах
+            # M * deriv_sigmoid(m) = градиент слоя M
+            # L.T = транспонированная матрица рассчитанных значений нейронов предыдущего слоя L/
 
-            # прямой ход - рассчёт значений слоёв
+            # прямой ход
             li = [inp]  # список рассчитанных значений для каждого слоя для каждого значения inp
             for i in range(len(self._synapses)):
                 # т.к. ВСЕ входные значения хранятся в матрице, то
@@ -106,26 +114,20 @@ class Perceptron:
                 # последующие слои рассчитываются из предыдущих
                 li.append(sigmoid(np.dot(li[i], self._synapses[i]) + self._biases[i]))
 
-            # обратный ход - рассчёт необходимых смещений для синапсов
-            # для последнего слоя рассчитывается ошибка = разница между рассчётными и необходимыми выходными сигналами
-            # из ошибки рассчитывется дельта ошибки - величина на которую необходимо совершить смещение
-            #      [(   ошибка   ) * производная значения ] = смещение, необходимое для минимизации ошибки в будущем
-            d_li = [(out - li[-1]) * deriv_sigmoid(li[-1])]  # необходимые смещения для каждого слоя
-            for i in range(len(li) - 2, 0, -1):  # обратный проход не включая первый и последний слои
+            # обратный ход
+            d_li = [(out - li[-1]) * deriv_sigmoid(li[-1])]  # граденты для каждого слоя кроме входного
+            for i in range(len(li) - 2, 0, -1):
                 # используя рассчитанное значение сдвига следующего слоя, рассчитывается ошибка для предыдущего слоя
                 li_err = d_li[0].dot(self._synapses[i].T)
-                # аналогично из ошибки рассчитывется величина на которую необходимо совершить смещение
+                # аналогично из ошибки рассчитывется градиент
                 d_li.insert(0, li_err * deriv_sigmoid(li[i]))
 
             # применение смещений для синапсов и сдвигов
             for i in range(len(self._synapses)):
-                # смещения применяются к синапсам
-                self._synapses[i] += li[i].T.dot(d_li[i]) * learn_coef
-                # смещения рассчитываются и применяются к сдвигам
+                self._synapses[i] += li[i].T.dot(d_li[i]) * learn_rate
                 # т.к. d_li представляет из себя смещение для каждого нейрона для каждого из заданных пар значений
                 # то для каждого нейрона находится среднее значение смещения
-                self._biases[i] += np.mean(d_li[i], axis=0) * learn_coef
+                self._biases[i] += np.mean(d_li[i], axis=0) * learn_rate
 
-            # если есть необходимость, в консоль выводится ошибка
             if err_print and (epoch % err_print_frequency) == 0:
-                print("Error: ", str(np.mean(np.abs(out - self.feedforward(inp)))))
+                print("Error: ", str(np.mean(np.abs(out - li[-1]))))
