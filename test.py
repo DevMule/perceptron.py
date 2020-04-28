@@ -1,7 +1,4 @@
-import numpy as np
 import perceptron
-
-# print(perceptron.__doc__)
 
 # XOR check
 p3 = perceptron.Perceptron(2, 4, 1)

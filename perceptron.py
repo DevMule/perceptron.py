@@ -52,20 +52,16 @@ class Perceptron:
     def __init__(self, layer_1: int, layer_2: int, *other_layers: int):
         # список слоёв и их размеров
         layers = [layer_1, layer_2] + list(other_layers)
-
-        synapses = []
-        biases = []
+        self._synapses = []
+        self._biases = []
         for i in range(len(layers) - 1):
             # генерируются синапсы между уровнями нейронов, которые представляют из себя массив весов
             # матрица Аij, где i и j - размеры соединяемых слоёв, каждый вес - вес между каждым из нейронов
             # каждый нейрон связываем с каждым нейроном предыдущего слоя случайным значением
-            synapses.append((2 * np.random.random((layers[i], layers[i + 1])) - 1))
+            self._synapses.append((2 * np.random.random((layers[i], layers[i + 1])) - 1))
             # генерируются сдвиги для каждого нейрона всех слоёв кроме первого
             # вектор Bi, где i - размер слоя. для каждого нейрона для всех слоёв кроме 1-го задаются случайные сдвиги
-            biases.append((2 * np.random.random(layers[i + 1]) - 1))
-
-        self._synapses = np.array(synapses)
-        self._biases = np.array(biases)
+            self._biases.append((2 * np.random.random(layers[i + 1]) - 1))
 
     def feedforward(self, inp: Union[List[float], np.ndarray]) -> List[float]:
         """
