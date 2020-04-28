@@ -32,9 +32,9 @@ class SingleLayerPerceptron:
             lo = sigmoid(np.dot(lh, self.ho_synapses) + self.o_biases)
 
             # обучение проходит по следующей формуле:
-            # d_Wij = learn_rate * Em * deriv_sigmoid(m) * L.T , где
+            # d_Wij = learning_rate * Em * deriv_sigmoid(m) * L.T , где
             # d_Wij = величина, на которую необходимо сместить вес между нейронами i слоя L и j слоя M
-            # learn_rate = коэффициент обучения
+            # learning_rate = коэффициент обучения
             # Em = ошибка значений нейронов слоя M, deriv_sigmoid(m) = производная функция в рассчитанных координатах
             # M * deriv_sigmoid(m) = градиент слоя M
             # L.T = транспонированная матрица рассчитанных значений нейронов предыдущего слоя L/
