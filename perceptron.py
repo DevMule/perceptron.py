@@ -21,9 +21,10 @@ Todo:
     https://www.youtube.com/watch?v=6g4O5UOH304
     https://habr.com/ru/post/271563/
     https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi
+    https://www.youtube.com/watch?v=t-Jpm1axBko
 
 Пример использования:
-    p3 = Perceptron(3, 2, 1)  # инициализация сети со слоями размеров 3, 2 и 1 соответственно
+    p3 = Perceptron(3, 4, 5, 2, 1)  # инициализация сети 3 скрытыми слоями размеров 4, 5 и 2 соответственно
     # первый слой - входной, последний - выходной, остальные - скрытые
     # Персептрон может иметь сколь угодное количество слоёв, но не менее двух
     p3.learn(  # функция обучения принимет список входных и выходных значений
@@ -92,37 +93,28 @@ class Perceptron:
         inp = np.array(inp)
         out = np.array(out)
         for epoch in range(epochs):
-            # обратный ход - рассчёт необходимых смещений для синапсов проходит по следующей формуле:
-            # d_Wij = learning_rate * Ex * deriv_sigmoid(x) * L.T , где
-            # d_Wij = величина, на которую необходимо сместить вес между нейронами текущего и предыдущего слоёв
-            # learning_rate = коэффициент обучения
-            # Ex = ошибка значений нейронов текущего слоя,
-            # deriv_sigmoid(x) = производная функция в рассчитанных координатах
-            # Ex * deriv_sigmoid(m) = градиент текущего слоя
-            # L.T = транспонированная матрица рассчитанных значений нейронов предыдущего слоя L
 
-            # прямой ход
-            li = [inp]  # список рассчитанных значений для каждого слоя для каждого значения inp
+            # прямой ход - расчёт сумм и значений нейронов
+            Si = [inp]  # суммы нейронов
+            Xi = [sigmoid(Si[-1])]  # значения нейронов
             for i in range(len(self._synapses)):
-                # т.к. ВСЕ входные значения хранятся в матрице, то
-                # для каждого слоя рассчитываются значения для каждого значения inp путём перемножения матриц
-                # последующие слои рассчитываются из предыдущих
-                li.append(sigmoid(np.dot(li[i], self._synapses[i]) + self._biases[i]))
+                Si.append(np.dot(Xi[i], self._synapses[i]) + self._biases[i])
+                Xi.append(sigmoid(Si[-1]))
 
-            # обратный ход
-            d_li = [(out - li[-1]) * deriv_sigmoid(li[-1])]  # граденты для каждого слоя кроме входного
-            for i in range(len(li) - 2, 0, -1):
-                # используя рассчитанное значение сдвига следующего слоя, рассчитывается ошибка для предыдущего слоя
-                li_err = d_li[0].dot(self._synapses[i].T)
-                # аналогично из ошибки рассчитывется градиент
-                d_li.insert(0, li_err * deriv_sigmoid(li[i]))
+            # перенос ошибки на скрытые слои
+            Ei = [out - Xi[-1]]  # ошибки для всех кроме входного слоёв сети
+            for i in range(len(Xi) - 2, 0, -1):  # проход по всем скрытым слоям
+                # Ei = Ei+1 * Wi
+                Ei.insert(0, Ei[0].dot(self._synapses[i].T))
 
-            # применение смещений для синапсов и сдвигов
+            # расчёт дельт весов синапсов
             for i in range(len(self._synapses)):
-                self._synapses[i] += li[i].T.dot(d_li[i]) * learning_rate
-                # т.к. d_li представляет из себя смещение для каждого нейрона для каждого из заданных пар значений
-                # то для каждого нейрона находится среднее значение смещения
-                self._biases[i] += np.mean(d_li[i], axis=0) * learning_rate
+                # E * deriv_sigmoid(Si)  скалярно значения между собой
+                grad = np.multiply(Ei[i], deriv_sigmoid(Si[i + 1]))
+                dw = np.dot(grad.T, Xi[i]).T
+                self._synapses[i] += dw * learning_rate
+                self._biases[i] += np.mean(dw, axis=0) * learning_rate
 
+            # вывод ошибки при необходимости
             if err_print and (epoch % err_print_frequency) == 0:
-                print("Error: ", str(np.mean(np.abs(out - li[-1]))))
+                print("Error: ", str(np.mean(np.abs(Ei[-1]))))

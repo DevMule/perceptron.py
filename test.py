@@ -1,7 +1,7 @@
 import perceptron
 import numpy as np
 
-np.random.seed(3)
+np.random.seed(1)
 # XOR check
 p3 = perceptron.Perceptron(2, 2, 1)
 p3.learn(

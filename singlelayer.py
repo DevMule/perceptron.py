@@ -1,7 +1,5 @@
 import numpy as np
 
-np.random.seed(1)
-
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -12,7 +10,7 @@ def deriv_sigmoid(x):
     return fx * (1 - fx)
 
 
-class SingleLayerPerceptron:
+class SLPerceptron:
     def __init__(self, l_inp=2, l_hid=3, l_out=1):
         self.ih_synapses = 2 * np.random.random((l_inp, l_hid)) - 1
         self.ho_synapses = 2 * np.random.random((l_hid, l_out)) - 1
@@ -49,16 +47,18 @@ class SingleLayerPerceptron:
             self.o_biases += np.mean(d_lo, axis=0) * learn_rate
             self.h_biases += np.mean(d_lh, axis=0) * learn_rate
             if (epoch % round(epochs / 20)) == 0:
-                print("Error: ", str(np.mean(np.abs(out - self.feedforward(inp)))))
+                print("Error: ", str(np.mean(np.abs(out - lo))))
 
 
 if __name__ == "__main__":
-    p3 = SingleLayerPerceptron(2, 4, 2)
+    np.random.seed(1)
+    p3 = SLPerceptron(2, 4, 1)
     # XOR check
-    p3.learn([[0, 0], [0, 1], [1, 0], [1, 1]],
-             [[0, 1], [1, 0], [1, 0], [0, 1]],
-             learn_rate=1)
-    print(p3.feedforward([0, 0]))  # 0, 1
-    print(p3.feedforward([0, 1]))  # 1, 0
-    print(p3.feedforward([1, 0]))  # 1, 0
-    print(p3.feedforward([1, 1]))  # 0, 1
+    p3.learn([[0, 0], [0, 1], [1, 0], [1, 1], [.5, .5]],
+             [[0], [1], [1], [0], [.5]],
+             learn_rate=.5)
+    print(np.round(p3.feedforward([0, 0]), 1))  # 0
+    print(np.round(p3.feedforward([0, 1]), 1))  # 1
+    print(np.round(p3.feedforward([1, 0]), 1))  # 1
+    print(np.round(p3.feedforward([1, 1]), 1))  # 0
+    print(np.round(p3.feedforward([.5, .5]), 1))  # .5
