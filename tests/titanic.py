@@ -1,8 +1,8 @@
 import csv
 import numpy as np
-from perceptron import Perceptron
+from perceptron import Rumelhart
 
-appeal_weights = {
+appeal_weights = {  # I dunno what i wanted it to look like #1
     " Lady.": [10, 30],
     " the Countess.": [10, 30],
     " Jonkheer.": [10, 30],
@@ -23,7 +23,7 @@ appeal_weights = {
 }
 
 
-def maturity(passenger):
+def maturity(passenger):  # I dunno what i wanted it to look like #2
     name = passenger['Name']
     for key in appeal_weights:
         if key in name:
@@ -47,7 +47,7 @@ out_data = []
 maxs = [-999999, -999999, -999999, -999999, -999999, -999999, -999999, -999999]
 mins = [999999, 999999, 999999, 999999, 999999, 999999, 999999, 999999]
 # парсим данные
-with open('data.csv') as f:
+with open('titanic.csv') as f:
     passengers = [{k: v for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
 for passenger in passengers:
     m = maturity(passenger)
@@ -72,7 +72,7 @@ for passenger in inp_data:
 total = len(inp_data)
 test_count = 100  # count of data pairs which is not will be learned, but which will be tested
 np.random.seed(2)
-network = Perceptron(8, 16, 1)
+network = Rumelhart(8, 16, 1)
 # обучаем на всю выборку, кроме последних 100
 network.learn(
     inp_data[0:total - test_count],
